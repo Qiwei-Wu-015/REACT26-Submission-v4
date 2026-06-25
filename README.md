@@ -99,31 +99,6 @@ nohup python main.py \
     > test.log 2>&1 &
 ```
 
-### Generic Offline Training
-
-```bash
-nohup python main.py \
-    --config-name generic_offline/motion_diffusion \
-    trainer.batch_size=4 \
-    stage=fit \
-    data_dir=/data2/REACT2025-NEW \
-    trainer.model.diff_model.eeg_head.enabled=true \
-    > train.log 2>&1 &
-```
-
-### Generic Offline Testing
-
-```bash
-nohup python main.py \
-    --config-name generic_offline/motion_diffusion \
-    trainer.batch_size=1 \
-    stage=test \
-    data_dir=/data2/REACT2025-NEW \
-    resume_id=<experiment-id> \
-    trainer.model.diff_model.eeg_head.enabled=true \
-    > test.log 2>&1 &
-```
-
 ### Personalized Online Training
 
 ```bash
@@ -145,31 +120,6 @@ python main.py \
     stage=test \
     data_dir=/data2/REACT2025-NEW \
     resume_id=260625124536_5xn3nrjr \
-    trainer.generic.eval_eeg=true \
-    trainer.main_model.args.personal_condition_mode=personality_only
-```
-
-### Personalized Offline Training
-
-```bash
-python main.py \
-    --config-name personalized_offline/perfrdiff_rewrite_weight \
-    stage=fit \
-    data_dir=/data2/REACT2025-NEW \
-    trainer.generic.train_eeg=true \
-    trainer.generic.train_eeg_head_only=false \
-    trainer.main_model.args.personal_condition_mode=personality_only
-```
-
-### Personalized Offline Testing
-
-```bash
-python main.py \
-    --config-name personalized_offline/perfrdiff_rewrite_weight \
-    trainer.batch_size=1 \
-    stage=test \
-    data_dir=/data2/REACT2025-NEW \
-    resume_id=<experiment-id> \
     trainer.generic.eval_eeg=true \
     trainer.main_model.args.personal_condition_mode=personality_only
 ```
@@ -287,31 +237,6 @@ nohup python main.py \
     > test.log 2>&1 &
 ```
 
-### 通用离线训练
-
-```bash
-nohup python main.py \
-    --config-name generic_offline/motion_diffusion \
-    trainer.batch_size=4 \
-    stage=fit \
-    data_dir=/data2/REACT2025-NEW \
-    trainer.model.diff_model.eeg_head.enabled=true \
-    > train.log 2>&1 &
-```
-
-### 通用离线测试
-
-```bash
-nohup python main.py \
-    --config-name generic_offline/motion_diffusion \
-    trainer.batch_size=1 \
-    stage=test \
-    data_dir=/data2/REACT2025-NEW \
-    resume_id=<experiment-id> \
-    trainer.model.diff_model.eeg_head.enabled=true \
-    > test.log 2>&1 &
-```
-
 ### 个性化在线训练
 
 ```bash
@@ -333,31 +258,6 @@ python main.py \
     stage=test \
     data_dir=/data2/REACT2025-NEW \
     resume_id=260625124536_5xn3nrjr \
-    trainer.generic.eval_eeg=true \
-    trainer.main_model.args.personal_condition_mode=personality_only
-```
-
-### 个性化离线训练
-
-```bash
-python main.py \
-    --config-name personalized_offline/perfrdiff_rewrite_weight \
-    stage=fit \
-    data_dir=/data2/REACT2025-NEW \
-    trainer.generic.train_eeg=true \
-    trainer.generic.train_eeg_head_only=false \
-    trainer.main_model.args.personal_condition_mode=personality_only
-```
-
-### 个性化离线测试
-
-```bash
-python main.py \
-    --config-name personalized_offline/perfrdiff_rewrite_weight \
-    trainer.batch_size=1 \
-    stage=test \
-    data_dir=/data2/REACT2025-NEW \
-    resume_id=<experiment-id> \
     trainer.generic.eval_eeg=true \
     trainer.main_model.args.personal_condition_mode=personality_only
 ```
