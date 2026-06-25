@@ -7,7 +7,7 @@
 This repository contains an improved version of the REACT 2026 baseline, supporting **both offline (Task 1) and online (Task 2)** facial reaction generation — including generic and personalized modes. It is built upon the **PerFRDiff** architecture with the following key enhancements:
 
 - **Flow Matching** — Replaced DDIM with a Flow Matching formulation for more efficient and higher-quality sampling.
-- **Removed Redundant Prior Module (Online)** — Eliminated the diffusion prior network for the online task to reduce complexity without sacrificing generation quality. (The prior is retained for offline, where it remains necessary.)
+- **Removed Redundant Prior Module** — Eliminated the diffusion prior network to reduce model complexity without sacrificing generation quality.
 - **Low-Rank Decomposition (LoRA) for Personalization** — Proposed a low-rank strategy to drastically reduce GPU memory usage of the personalized hypernetwork, enabling personalization on a single 24 GB RTX 3090.
 - **Stitch Encoding Module** — A cross-modal feature fusion encoder that integrates audio, 3DMM, emotion, and future speaker emotion predictions.
 - **Speaker Future Behavior Prediction** — Added a predictor module to forecast the speaker's upcoming 10-frame emotion, enhancing online reaction coherence.
@@ -195,7 +195,7 @@ Required pretrained models should be placed under `pretrained_models/` (weights)
 本仓库是 REACT 2026 的改进基线，支持**离线（Task 1）和在线（Task 2）**面部反应生成任务，含通用和个性化模式。基于 **PerFRDiff** 架构改造，主要改进如下：
 
 - **Flow Matching 采样** — 将 DDIM 替换为 Flow Matching，采样更高效、质量更高。
-- **去除冗余 Prior 模块（在线任务）** — 在线任务中移除 Diffusion Prior Network，降低复杂度且无损生成质量。（离线模式中保留 Prior，因其在离线场景下仍有必要。）
+- **去除冗余 Prior 模块** — 移除了 Diffusion Prior Network，降低模型复杂度，无损生成质量。
 - **低秩分解（LoRA）个性化** — 提出低秩策略，大幅降低个性化超网络的显存占用，使单张 24 GB RTX 3090 即可完成个性化训练。
 - **Stitch 特征融合编码模块** — 跨模态特征交互融合，整合音频、3DMM、情感及未来说话者情感预测。
 - **说话者未来行为预测** — 新增预测模块，预测说话者未来 10 帧情感，提升在线反应连贯性。
