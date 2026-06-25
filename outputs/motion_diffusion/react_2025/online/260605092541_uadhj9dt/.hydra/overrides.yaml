@@ -1,0 +1,8 @@
+- data=motion_diffusion
+- trainer=motion_diffusion
+- trainer.batch_size=1
+- trainer.generic.bidirectional=true
+- stage=test
+- task=online
+- data_dir=/data2/REACT2025-NEW
+- resume_id=260604191108_sxuzs9dh

@@ -1,0 +1,11 @@
+[2026-06-24 22:38:24,604][__main__][INFO] - Original working directory: /media/Hulu/面部反应生成/baseline_react2026-main-v2
+[2026-06-24 22:38:24,605][__main__][INFO] - Instantiating trainer
+[2026-06-24 22:38:24,782][__main__][INFO] - Done instantiating trainer
+[2026-06-24 22:38:24,782][__main__][INFO] - Instantiating data module
+[2026-06-24 22:38:24,809][__main__][INFO] - Model Testing ...
+[2026-06-24 22:38:24,809][trainer.motion_diffusion][INFO] - Loading test data module
+[2026-06-24 22:38:24,833][trainer.motion_diffusion][INFO] - Test data module loaded
+[2026-06-24 22:38:25,602][trainer.motion_diffusion][INFO] - Loading post processor
+[2026-06-24 22:38:25,792][trainer.motion_diffusion][INFO] - Post processor loaded
+[2026-06-25 11:58:35,572][trainer.motion_diffusion][INFO] - {'FRC': 0.6545667586476855, 'FRC_time': 33.43429834896233, 'FRD': 198.16242361089073, 'FRD_time': 2321.81909129594, 'TLCC': 47.357601165771484, 'TLCC_time': 15.517666343017481, 'smse': 0.14080648124217987, 'smse_time': 0.625839923042804, 'FRVar': 0.09035252779722214, 'FRVar_time': 0.40062008798122406, 'EEG_FRC': nan, 'EEG_FRC_time': 3.61184777203016, 'EEG_FRD': nan, 'EEG_FRD_time': 3.40316577302292, 'EEG_TLCC': nan, 'EEG_TLCC_time': 16.375209433026612, 'EEG_smse': 0.006751780863851309, 'EEG_smse_time': 0.0725433569168672, 'EEG_FRVar': nan, 'EEG_FRVar_time': 0.014324179966934025}
+[2026-06-25 11:58:36,035][__main__][INFO] - Testing done

@@ -1,0 +1,7 @@
+- data=motion_diffusion
+- trainer=motion_diffusion
+- trainer.batch_size=8
+- trainer.generic.bidirectional=true
+- stage=fit
+- task=online
+- data_dir=/data2/REACT2025-NEW
