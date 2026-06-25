@@ -1,16 +1,25 @@
-# REACT 2026 Baseline — Improved Online Facial Reaction Generation
+# REACT 2026 Improved Baseline — Offline & Online Facial Reaction Generation
 
 > English | [中文](#中文)
 
 ## Overview
 
-This repository contains an improved version of the REACT 2026 baseline for online facial reaction generation, built upon the **PerFRDiff** architecture. We introduce several key enhancements:
+This repository contains an improved version of the REACT 2026 baseline, supporting **both offline (Task 1) and online (Task 2)** facial reaction generation — including generic and personalized modes. It is built upon the **PerFRDiff** architecture with the following key enhancements:
 
-- **Removed Redundant Prior Module** — Eliminated the diffusion prior network to reduce model complexity without sacrificing generation quality.
 - **Flow Matching** — Replaced DDIM with a Flow Matching formulation for more efficient and higher-quality sampling.
+- **Removed Redundant Prior Module (Online)** — Eliminated the diffusion prior network for the online task to reduce complexity without sacrificing generation quality. (The prior is retained for offline, where it remains necessary.)
 - **Low-Rank Decomposition (LoRA) for Personalization** — Proposed a low-rank strategy to drastically reduce GPU memory usage of the personalized hypernetwork, enabling personalization on a single 24 GB RTX 3090.
 - **Stitch Encoding Module** — A cross-modal feature fusion encoder that integrates audio, 3DMM, emotion, and future speaker emotion predictions.
 - **Speaker Future Behavior Prediction** — Added a predictor module to forecast the speaker's upcoming 10-frame emotion, enhancing online reaction coherence.
+
+---
+
+## Supported Tasks
+
+| Task | Generic | Personalized |
+|------|:-------:|:------------:|
+| **Offline (Task 1)** | ✅ `generic_offline/motion_diffusion` | ✅ `personalized_offline/perfrdiff_rewrite_weight` |
+| **Online (Task 2)** | ✅ `generic_online/motion_diffusion` | ✅ `personalized_online/perfrdiff_rewrite_weight` |
 
 ---
 
@@ -29,7 +38,7 @@ We compare against the official REACT 2026 baseline under the same bidirectional
 
 ## Hardware Constraints
 
-We only have access to a single **RTX 3090 (24 GB)**, which is insufficient for offline task training/testing. If any bugs are found in the submitted code, please feel free to contact us for immediate fixes.
+This codebase fully supports **both offline and online tasks** (generic + personalized). However, we only have access to a single **RTX 3090 (24 GB)**, which is sufficient for all online experiments but insufficient for offline training/testing (which requires processing full-length clips with larger memory footprints). All reported results and provided checkpoints are therefore for the online setting only. The offline code paths are complete and ready to run on GPUs with larger memory. If any bugs are found, please contact us for immediate fixes.
 
 ---
 
@@ -40,6 +49,7 @@ Our low-rank decomposition enables personalized hypernetwork training on a 24 GB
 ```
 # In this file, change:
 configs/personalized_online/trainer/perfrdiff_rewrite_weight.yaml
+configs/personalized_offline/trainer/perfrdiff_rewrite_weight.yaml
 
     lora_rank: 4   →   lora_rank: 0
 ```
@@ -89,6 +99,31 @@ nohup python main.py \
     > test.log 2>&1 &
 ```
 
+### Generic Offline Training
+
+```bash
+nohup python main.py \
+    --config-name generic_offline/motion_diffusion \
+    trainer.batch_size=4 \
+    stage=fit \
+    data_dir=/data2/REACT2025-NEW \
+    trainer.model.diff_model.eeg_head.enabled=true \
+    > train.log 2>&1 &
+```
+
+### Generic Offline Testing
+
+```bash
+nohup python main.py \
+    --config-name generic_offline/motion_diffusion \
+    trainer.batch_size=1 \
+    stage=test \
+    data_dir=/data2/REACT2025-NEW \
+    resume_id=<experiment-id> \
+    trainer.model.diff_model.eeg_head.enabled=true \
+    > test.log 2>&1 &
+```
+
 ### Personalized Online Training
 
 ```bash
@@ -114,6 +149,31 @@ python main.py \
     trainer.main_model.args.personal_condition_mode=personality_only
 ```
 
+### Personalized Offline Training
+
+```bash
+python main.py \
+    --config-name personalized_offline/perfrdiff_rewrite_weight \
+    stage=fit \
+    data_dir=/data2/REACT2025-NEW \
+    trainer.generic.train_eeg=true \
+    trainer.generic.train_eeg_head_only=false \
+    trainer.main_model.args.personal_condition_mode=personality_only
+```
+
+### Personalized Offline Testing
+
+```bash
+python main.py \
+    --config-name personalized_offline/perfrdiff_rewrite_weight \
+    trainer.batch_size=1 \
+    stage=test \
+    data_dir=/data2/REACT2025-NEW \
+    resume_id=<experiment-id> \
+    trainer.generic.eval_eeg=true \
+    trainer.main_model.args.personal_condition_mode=personality_only
+```
+
 ---
 
 ## Environment Setup
@@ -132,13 +192,22 @@ Required pretrained models should be placed under `pretrained_models/` (weights)
 
 ## 概述
 
-本仓库是 REACT 2026 在线面部反应生成任务的改进基线，基于 **PerFRDiff** 架构改造，主要改进如下：
+本仓库是 REACT 2026 的改进基线，支持**离线（Task 1）和在线（Task 2）**面部反应生成任务，含通用和个性化模式。基于 **PerFRDiff** 架构改造，主要改进如下：
 
-- **去除冗余 Prior 模块** — 移除了 Diffusion Prior Network，降低模型复杂度，无损生成质量。
 - **Flow Matching 采样** — 将 DDIM 替换为 Flow Matching，采样更高效、质量更高。
+- **去除冗余 Prior 模块（在线任务）** — 在线任务中移除 Diffusion Prior Network，降低复杂度且无损生成质量。（离线模式中保留 Prior，因其在离线场景下仍有必要。）
 - **低秩分解（LoRA）个性化** — 提出低秩策略，大幅降低个性化超网络的显存占用，使单张 24 GB RTX 3090 即可完成个性化训练。
 - **Stitch 特征融合编码模块** — 跨模态特征交互融合，整合音频、3DMM、情感及未来说话者情感预测。
 - **说话者未来行为预测** — 新增预测模块，预测说话者未来 10 帧情感，提升在线反应连贯性。
+
+---
+
+## 支持的任务
+
+| 任务 | 通用 | 个性化 |
+|------|:---:|:---:|
+| **离线 (Task 1)** | ✅ `generic_offline/motion_diffusion` | ✅ `personalized_offline/perfrdiff_rewrite_weight` |
+| **在线 (Task 2)** | ✅ `generic_online/motion_diffusion` | ✅ `personalized_online/perfrdiff_rewrite_weight` |
 
 ---
 
@@ -157,7 +226,7 @@ Required pretrained models should be placed under `pretrained_models/` (weights)
 
 ## 硬件限制说明
 
-我们仅有一张 **RTX 3090 (24 GB)**，无法完成离线（offline）任务的训练和测试。若提交代码存在 bug，可第一时间联系我们修复。
+本代码完整支持**离线与在线全部任务**（通用 + 个性化）。但由于我们仅有一张 **RTX 3090 (24 GB)**，在线任务可正常运行，离线训练/测试因需处理完整长序列而显存不足，无法完成。因此所有报告结果和提供的权重仅针对在线设置。离线代码路径是完整的，可以在更大显存的 GPU 上运行。若提交代码存在 bug，可第一时间联系我们修复。
 
 ---
 
@@ -168,6 +237,7 @@ Required pretrained models should be placed under `pretrained_models/` (weights)
 ```
 # 修改以下文件中的参数：
 configs/personalized_online/trainer/perfrdiff_rewrite_weight.yaml
+configs/personalized_offline/trainer/perfrdiff_rewrite_weight.yaml
 
     lora_rank: 4   →   lora_rank: 0
 ```
@@ -217,6 +287,31 @@ nohup python main.py \
     > test.log 2>&1 &
 ```
 
+### 通用离线训练
+
+```bash
+nohup python main.py \
+    --config-name generic_offline/motion_diffusion \
+    trainer.batch_size=4 \
+    stage=fit \
+    data_dir=/data2/REACT2025-NEW \
+    trainer.model.diff_model.eeg_head.enabled=true \
+    > train.log 2>&1 &
+```
+
+### 通用离线测试
+
+```bash
+nohup python main.py \
+    --config-name generic_offline/motion_diffusion \
+    trainer.batch_size=1 \
+    stage=test \
+    data_dir=/data2/REACT2025-NEW \
+    resume_id=<experiment-id> \
+    trainer.model.diff_model.eeg_head.enabled=true \
+    > test.log 2>&1 &
+```
+
 ### 个性化在线训练
 
 ```bash
@@ -238,6 +333,31 @@ python main.py \
     stage=test \
     data_dir=/data2/REACT2025-NEW \
     resume_id=260625124536_5xn3nrjr \
+    trainer.generic.eval_eeg=true \
+    trainer.main_model.args.personal_condition_mode=personality_only
+```
+
+### 个性化离线训练
+
+```bash
+python main.py \
+    --config-name personalized_offline/perfrdiff_rewrite_weight \
+    stage=fit \
+    data_dir=/data2/REACT2025-NEW \
+    trainer.generic.train_eeg=true \
+    trainer.generic.train_eeg_head_only=false \
+    trainer.main_model.args.personal_condition_mode=personality_only
+```
+
+### 个性化离线测试
+
+```bash
+python main.py \
+    --config-name personalized_offline/perfrdiff_rewrite_weight \
+    trainer.batch_size=1 \
+    stage=test \
+    data_dir=/data2/REACT2025-NEW \
+    resume_id=<experiment-id> \
     trainer.generic.eval_eeg=true \
     trainer.main_model.args.personal_condition_mode=personality_only
 ```
