@@ -28,7 +28,32 @@ class ModalityAdapter(nn.Module):
         return self.net(x)
 
 # ------------------------------------------------------------------------------------------
-# 2. 前馈网络 (FeedForward)
+# 2. 低秩双线性适配器 (Low-Rank Bilinear Adapter) — Polynomial Tensor Fusion
+# 作用：捕获 src 和 dst 之间的乘法交互（二阶交叉项），与 ModalityAdapter 并行
+# 零初始化保证训练初期等价于原始模型
+# 改进版：加入 LayerNorm 稳定乘法前的特征分布，防止 u⊙v 方差爆炸
+# ------------------------------------------------------------------------------------------
+class BilinearAdapter(nn.Module):
+    def __init__(self, dim, rank=8):
+        super().__init__()
+        # LayerNorm 稳定乘法前的特征分布，防止 u⊙v 方差爆炸
+        self.norm_u = nn.LayerNorm(dim)
+        self.norm_v = nn.LayerNorm(dim)
+        self.U = nn.Linear(dim, rank, bias=False)   # src → low-rank
+        self.V = nn.Linear(dim, rank, bias=False)   # dst → low-rank
+        self.P = nn.Linear(rank, dim, bias=False)   # low-rank → dim
+        # 零初始化输出投影：训练初期 bilinear 分支输出为零，等价于原始模型
+        nn.init.zeros_(self.P.weight)
+
+    def forward(self, src, dst):
+        # src: [B, L, D]; dst: [B, L, D]
+        # LayerNorm 先稳定分布，再做低秩投影
+        u = self.U(self.norm_u(src))               # [B, L, R]
+        v = self.V(self.norm_v(dst))               # [B, L, R]
+        return self.P(u * v)  # element-wise 乘法交互 + 投影回 D 维
+
+# ------------------------------------------------------------------------------------------
+# 3. 前馈网络 (FeedForward)
 # 标准的 Transformer FFN
 # ------------------------------------------------------------------------------------------
 class FeedForward(nn.Module):
@@ -46,41 +71,44 @@ class FeedForward(nn.Module):
         return self.net(x)
 
 # ------------------------------------------------------------------------------------------
-# 3. 缝合块 (StitchBlock)
-# 核心逻辑：MHSA -> Stitch(Attn) -> FFN -> Stitch(FFN)
+# 4. 缝合块 (StitchBlock)
+# 核心逻辑：MHSA -> Stitch(Attn) + Bilinear -> FFN -> Stitch(FFN) + Bilinear
 # ------------------------------------------------------------------------------------------
 class StitchBlock(nn.Module):
     def __init__(self, dim, num_heads, num_modals=3, mlp_ratio=4., drop=0.1):
         super().__init__()
         self.num_modals = num_modals
         
-        # 3.1 Intra-Modal Self-Attention (每个模态独立的时序建模)
+        # 4.1 Intra-Modal Self-Attention (每个模态独立的时序建模)
         self.norms_attn = nn.ModuleList([nn.LayerNorm(dim) for _ in range(num_modals)])
         self.attns = nn.ModuleList([
             nn.MultiheadAttention(dim, num_heads, dropout=drop, batch_first=True) 
             for _ in range(num_modals)
         ])
         
-        # 3.2 First Stitching Layer (MHSA 之后)
-        # 动态创建适配器: i(Source) -> j(Target)
+        # 4.2 First Stitching Layer (MHSA 之后) — MLP Adapter + Bilinear Adapter
         self.stitch_att = nn.ModuleDict()
+        self.bilinear_att = nn.ModuleDict()
         for src in range(num_modals):
             for dst in range(num_modals):
                 if src != dst:
                     self.stitch_att[f'{src}_{dst}'] = ModalityAdapter(dim)
+                    self.bilinear_att[f'{src}_{dst}'] = BilinearAdapter(dim)
 
-        # 3.3 Feed Forward Network (每个模态独立)
+        # 4.3 Feed Forward Network (每个模态独立)
         self.ffns = nn.ModuleList([
             FeedForward(dim, int(dim * mlp_ratio), dropout=drop) 
             for _ in range(num_modals)
         ])
 
-        # 3.4 Second Stitching Layer (FFN 之后)
+        # 4.4 Second Stitching Layer (FFN 之后) — MLP Adapter + Bilinear Adapter
         self.stitch_mlp = nn.ModuleDict()
+        self.bilinear_mlp = nn.ModuleDict()
         for src in range(num_modals):
             for dst in range(num_modals):
                 if src != dst:
                     self.stitch_mlp[f'{src}_{dst}'] = ModalityAdapter(dim)
+                    self.bilinear_mlp[f'{src}_{dst}'] = BilinearAdapter(dim)
 
     def forward(self, x_list):
         # x_list: [Audio, 3DMM, Emo], Shape = [Batch, Seq, Dim]
@@ -94,22 +122,23 @@ class StitchBlock(nn.Module):
             x_post_attn.append(res + x_attn) # Residual
         
         # --- Stage 2: Cross-Modal Stitching 1 (Attn Level) ---
-        # 串行逻辑：使用 MHSA 后的特征作为 Source 进行缝合
         x_stitched_1 = [x.clone() for x in x_post_attn]
         current_state = [x.clone() for x in x_post_attn] # 冻结 Source
         
         for src in range(self.num_modals):
             for dst in range(self.num_modals):
                 if src != dst:
-                    # Target = Target + Adapter(Source)
+                    # MLP 分支
                     adapter = self.stitch_att[f'{src}_{dst}']
-                    x_stitched_1[dst] = x_stitched_1[dst] + adapter(current_state[src])
+                    feat = adapter(current_state[src])
+                    # 双线性分支：捕获 src 和 dst 的乘法交叉项
+                    bilinear_feat = self.bilinear_att[f'{src}_{dst}'](current_state[src], current_state[dst])
+                    x_stitched_1[dst] = x_stitched_1[dst] + feat + bilinear_feat
         
         # --- Stage 3: FFN (特征提炼) ---
         x_post_ffn = []
         for i, x in enumerate(x_stitched_1):
             res = x
-            # FFN 内部包含了 Pre-Norm
             x_ffn = self.ffns[i](x)
             x_post_ffn.append(res + x_ffn)
 
@@ -120,13 +149,17 @@ class StitchBlock(nn.Module):
         for src in range(self.num_modals):
             for dst in range(self.num_modals):
                 if src != dst:
+                    # MLP 分支
                     adapter = self.stitch_mlp[f'{src}_{dst}']
-                    x_final[dst] = x_final[dst] + adapter(current_state[src])
+                    feat = adapter(current_state[src])
+                    # 双线性分支：捕获 src 和 dst 的乘法交叉项
+                    bilinear_feat = self.bilinear_mlp[f'{src}_{dst}'](current_state[src], current_state[dst])
+                    x_final[dst] = x_final[dst] + feat + bilinear_feat
         
         return x_final
 
 # ------------------------------------------------------------------------------------------
-# 4. 缝合编码器 (StitchEncoder) - 主入口
+# 5. 缝合编码器 (StitchEncoder) - 主入口
 # ------------------------------------------------------------------------------------------
 class StitchEncoder(nn.Module):
     def __init__(self, 
@@ -144,7 +177,6 @@ class StitchEncoder(nn.Module):
         ])
         
         # 2. 位置编码 (Learnable Positional Embedding)
-        # 假设最大序列长度为 1000，足够覆盖 60 帧
         self.pos_embed = nn.Parameter(torch.zeros(1, 1000, latent_dim))
         nn.init.trunc_normal_(self.pos_embed, std=0.02)
         
