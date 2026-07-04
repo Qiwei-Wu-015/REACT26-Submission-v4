@@ -102,7 +102,7 @@ diff_model:
             use_past_frames: False
             # ── Stitch encoder + speaker emotion predictor ──
             use_speaker_predictor: False  # enable speaker future emotion predictor
-            use_stitch: False             # enable stitch encoder (if False, uses linear projection)
+            use_stitch: True             # enable stitch encoder (if False, uses linear projection)
             stitch_layers: 2
             s_future_emotion_enc_drop_prob: 0.2
         scheduler:
