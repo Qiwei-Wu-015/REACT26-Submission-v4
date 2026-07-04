@@ -1,0 +1,6 @@
+- trainer.batch_size=8
+- trainer.generic.bidirectional=true
+- stage=fit
+- data_dir=/data2/REACT2025-NEW
+- trainer.model.diff_model.eeg_head.enabled=true
+- trainer.generic.train_eeg_head_only=false

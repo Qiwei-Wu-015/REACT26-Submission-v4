@@ -1,5 +1,4 @@
 # Large data directories
-outputs/
 pretrained_models/
 save/
 
@@ -19,4 +18,3 @@ __pycache__/
 # IDE
 .vscode/
 .idea/
-external/FaceVerse/data/faceverse_simple_v2.npy
