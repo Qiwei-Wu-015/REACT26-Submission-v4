@@ -1,7 +1,0 @@
-- trainer.batch_size=1
-- trainer.generic.bidirectional=true
-- stage=test
-- data_dir=/data2/REACT2025-NEW
-- resume_id=260624144915_5m1kmoy2
-- trainer.generic.eval_eeg=true
-- trainer.model.diff_model.eeg_head.enabled=true
