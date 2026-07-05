@@ -28,7 +28,7 @@
 
 | 方法 | 训练日志 |
 |------|----------|
-| MAFRG | `outputs/.../260624144915_5m1kmoy2/main.log` |
+| MAFRG | `outputs/.../260701154446_uikda4ar/main.log` |
 | PMAFRG | `outputs/.../260705102821_uyh7q1p4/main.log` |
 
 
