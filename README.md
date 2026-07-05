@@ -1,142 +1,4 @@
-# REACT 2026 Improved Baseline — Offline & Online Facial Reaction Generation
-
-> English | [中文](#中文)
-
-## Overview
-
-This repository contains an improved version of the REACT 2026 baseline, supporting **both offline (Task 1) and online (Task 2)** facial reaction generation — including generic and personalized modes. It is built upon the **PerFRDiff** architecture with the following key enhancements:
-
-- **Flow Matching** — Replaced DDIM with a Flow Matching formulation for more efficient and higher-quality sampling.
-- **Removed Redundant Prior Module** — Eliminated the diffusion prior network to reduce model complexity without sacrificing generation quality.
-- **Low-Rank Decomposition (LoRA) for Personalization** — Proposed a low-rank strategy to drastically reduce GPU memory usage of the personalized hypernetwork, enabling personalization on a single 24 GB RTX 3090.
-- **Stitch Encoding Module** *(Online)* — A cross-modal feature fusion encoder that integrates audio, 3DMM, emotion, and future speaker emotion predictions for richer conditioning in the online setting.
-- **Speaker Future Behavior Prediction** *(Online)* — A dedicated predictor module to forecast the speaker's upcoming 10-frame emotion, enhancing online reaction coherence and anticipation.
-
----
-
-## Supported Tasks
-
-| Task | Generic | Personalized |
-|------|:-------:|:------------:|
-| **Offline (Task 1)** | ✅ `generic_offline/motion_diffusion` | ✅ `personalized_offline/perfrdiff_rewrite_weight` |
-| **Online (Task 2)** | ✅ `generic_online/motion_diffusion` | ✅ `personalized_online/perfrdiff_rewrite_weight` |
-
----
-
-## Results (Online, Bidirectional)
-
-We compare against the official REACT 2026 baseline under the same bidirectional online setting.
-
-| | Training Log | Test Log | FRC ↑ |
-|---|:---:|:---:|:---:|
-| **Baseline** | `outputs/.../260604191108_sxuzs9dh/main.log` | `outputs/.../260605092541_uadhj9dt/main.log` | 0.6028 |
-| **Ours** | `outputs/.../260624144915_5m1kmoy2/main.log` | `outputs/.../260624223823_iooc7ldj/main.log` | **0.6546** |
-
-**→ +5.2 points improvement in FRC.**
-
----
-
-## Hardware Constraints
-
-This codebase fully supports **both offline and online tasks** (generic + personalized). However, we only have access to a single **RTX 3090 (24 GB)**, which is sufficient for all online experiments but insufficient for offline training/testing (which requires processing full-length clips with larger memory footprints). All reported results and provided checkpoints are therefore for the online setting only. The offline code paths are complete and ready to run on GPUs with larger memory. If any bugs are found, please contact us for immediate fixes.
-
----
-
-## Low-Rank Personalization
-
-Our low-rank decomposition enables personalized hypernetwork training on a 24 GB GPU. To disable it and match the baseline exactly:
-
-```
-# In this file, change:
-configs/personalized_online/trainer/perfrdiff_rewrite_weight.yaml
-configs/personalized_offline/trainer/perfrdiff_rewrite_weight.yaml
-
-    lora_rank: 4   →   lora_rank: 0
-```
-
-All other hyperparameters are identical to the baseline.
-
----
-
-## Pretrained Weights
-
-**Generic online pretrained weights** (TransformerDenoiser + EEGPredictionHead) are available via Quark Drive:
-
-> https://pan.quark.cn/s/cf449d1de0d4
-
-Personalized low-rank weights are currently training and will be provided at the same link when ready.
-
----
-
-## Usage
-
-### Generic Online Training
-
-```bash
-nohup python main.py \
-    --config-name generic_online/motion_diffusion \
-    trainer.batch_size=8 \
-    trainer.generic.bidirectional=true \
-    stage=fit \
-    data_dir=/data2/REACT2025-NEW \
-    trainer.model.diff_model.eeg_head.enabled=true \
-    trainer.generic.train_eeg_head_only=false \
-    > train.log 2>&1 &
-```
-
-### Generic Online Testing
-
-```bash
-nohup python main.py \
-    --config-name generic_online/motion_diffusion \
-    trainer.batch_size=1 \
-    trainer.generic.bidirectional=true \
-    stage=test \
-    data_dir=/data2/REACT2025-NEW \
-    resume_id=260624144915_5m1kmoy2 \
-    trainer.generic.eval_eeg=true \
-    trainer.model.diff_model.eeg_head.enabled=true \
-    > test.log 2>&1 &
-```
-
-### Personalized Online Training
-
-```bash
-python main.py \
-    --config-name personalized_online/perfrdiff_rewrite_weight \
-    stage=fit \
-    data_dir=/data2/REACT2025-NEW \
-    trainer.generic.train_eeg=true \
-    trainer.generic.train_eeg_head_only=false \
-    trainer.main_model.args.personal_condition_mode=personality_only
-```
-
-### Personalized Online Testing
-
-```bash
-python main.py \
-    --config-name personalized_online/perfrdiff_rewrite_weight \
-    trainer.batch_size=1 \
-    stage=test \
-    data_dir=/data2/REACT2025-NEW \
-    resume_id=260625124536_5xn3nrjr \
-    trainer.generic.eval_eeg=true \
-    trainer.main_model.args.personal_condition_mode=personality_only
-```
-
----
-
-## Environment Setup
-
-```bash
-pip install -r requirements.txt
-```
-
-Required pretrained models should be placed under `pretrained_models/` (weights) and `external/` (FaceVerse utilities). See the Quark Drive link above for downloads.
-
----
-
----
+# REACT 2026 Submission-V2
 
 ## 中文
 
@@ -161,16 +23,15 @@ Required pretrained models should be placed under `pretrained_models/` (weights)
 
 ---
 
-## 实验结果（在线、双向）
+## online训练日志
 
-在相同 bidirectional 在线设置下与官方 REACT 2026 基线对比。
 
-| | 训练日志 | 测试日志 | FRC ↑ |
-|---|:---:|:---:|:---:|
-| **基线** | `outputs/.../260604191108_sxuzs9dh/main.log` | `outputs/.../260605092541_uadhj9dt/main.log` | 0.6028 |
-| **我们的** | `outputs/.../260624144915_5m1kmoy2/main.log` | `outputs/.../260624223823_iooc7ldj/main.log` | **0.6546** |
+| 方法 | 训练日志 |
+|------|----------|
+| MAFRG | `outputs/.../260624144915_5m1kmoy2/main.log` |
+| PMAFRG | `outputs/.../260705102821_uyh7q1p4/main.log` |
 
-**→ FRC 提升约 5.2 个点。**
+
 
 ---
 
@@ -198,11 +59,10 @@ configs/personalized_offline/trainer/perfrdiff_rewrite_weight.yaml
 
 ## 预训练权重
 
-**在线通用预训练权重**（TransformerDenoiser + EEGPredictionHead）已上传至夸克网盘：
+**在线预训练权重**（TransformerDenoiser + EEGPredictionHead）已上传至夸克网盘：
 
 > https://pan.quark.cn/s/cf449d1de0d4
 
-个性化低秩分解权重正在训练中，训练完成后将更新至同一链接。
 
 ---
 
@@ -231,7 +91,7 @@ nohup python main.py \
     trainer.generic.bidirectional=true \
     stage=test \
     data_dir=/data2/REACT2025-NEW \
-    resume_id=260624144915_5m1kmoy2 \
+    resume_id=260701154446_uikda4ar \
     trainer.generic.eval_eeg=true \
     trainer.model.diff_model.eeg_head.enabled=true \
     > test.log 2>&1 &
@@ -257,19 +117,11 @@ python main.py \
     trainer.batch_size=1 \
     stage=test \
     data_dir=/data2/REACT2025-NEW \
-    resume_id=260625124536_5xn3nrjr \
+    resume_id=260705102821_uyh7q1p4 \
     trainer.generic.eval_eeg=true \
     trainer.main_model.args.personal_condition_mode=personality_only
 ```
 
 ---
-
-## 环境配置
-
-```bash
-pip install -r requirements.txt
-```
-
-所需预训练模型请放入 `pretrained_models/`，FaceVerse 工具文件放入 `external/`。详见上方夸克网盘链接。
 
 
