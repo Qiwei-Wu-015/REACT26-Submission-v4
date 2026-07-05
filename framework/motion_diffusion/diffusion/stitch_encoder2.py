@@ -55,13 +55,10 @@ class ResampleModalityAdapter(nn.Module):
 # 零初始化保证训练初期等价于原始模型
 # ------------------------------------------------------------------------------------------
 class BilinearAdapter(nn.Module):
-    def __init__(self, dim, src_len, dst_len, rank=8):
+    def __init__(self, dim, src_len, dst_len, rank=16):
         super().__init__()
         self.src_len = src_len
         self.dst_len = dst_len
-        # LayerNorm 稳定乘法前的特征分布，防止 u⊙v 方差爆炸
-        self.norm_u = nn.LayerNorm(dim)
-        self.norm_v = nn.LayerNorm(dim)
         self.U = nn.Linear(dim, rank, bias=False)   # src → low-rank
         self.V = nn.Linear(dim, rank, bias=False)   # dst → low-rank
         self.P = nn.Linear(rank, dim, bias=False)   # low-rank → dim
@@ -70,9 +67,8 @@ class BilinearAdapter(nn.Module):
 
     def forward(self, src, dst):
         # src: [B, L_src, D]; dst: [B, L_dst, D]
-        # LayerNorm 先稳定分布，再做低秩投影
-        u = self.U(self.norm_u(src))              # [B, L_src, R]
-        v = self.V(self.norm_v(dst))              # [B, L_dst, R]
+        u = self.U(src)                              # [B, L_src, R]
+        v = self.V(dst)                              # [B, L_dst, R]
 
         # 将 src 重采样到 dst 长度（与 ResampleModalityAdapter 一致）
         if self.src_len != self.dst_len:

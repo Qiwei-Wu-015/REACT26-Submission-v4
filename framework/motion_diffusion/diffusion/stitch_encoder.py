@@ -31,14 +31,10 @@ class ModalityAdapter(nn.Module):
 # 2. 低秩双线性适配器 (Low-Rank Bilinear Adapter) — Polynomial Tensor Fusion
 # 作用：捕获 src 和 dst 之间的乘法交互（二阶交叉项），与 ModalityAdapter 并行
 # 零初始化保证训练初期等价于原始模型
-# 改进版：加入 LayerNorm 稳定乘法前的特征分布，防止 u⊙v 方差爆炸
 # ------------------------------------------------------------------------------------------
 class BilinearAdapter(nn.Module):
-    def __init__(self, dim, rank=8):
+    def __init__(self, dim, rank=16):
         super().__init__()
-        # LayerNorm 稳定乘法前的特征分布，防止 u⊙v 方差爆炸
-        self.norm_u = nn.LayerNorm(dim)
-        self.norm_v = nn.LayerNorm(dim)
         self.U = nn.Linear(dim, rank, bias=False)   # src → low-rank
         self.V = nn.Linear(dim, rank, bias=False)   # dst → low-rank
         self.P = nn.Linear(rank, dim, bias=False)   # low-rank → dim
@@ -47,9 +43,8 @@ class BilinearAdapter(nn.Module):
 
     def forward(self, src, dst):
         # src: [B, L, D]; dst: [B, L, D]
-        # LayerNorm 先稳定分布，再做低秩投影
-        u = self.U(self.norm_u(src))               # [B, L, R]
-        v = self.V(self.norm_v(dst))               # [B, L, R]
+        u = self.U(src)                              # [B, L, R]
+        v = self.V(dst)                              # [B, L, R]
         return self.P(u * v)  # element-wise 乘法交互 + 投影回 D 维
 
 # ------------------------------------------------------------------------------------------
