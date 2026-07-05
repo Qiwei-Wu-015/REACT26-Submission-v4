@@ -1,6 +1,0 @@
-- trainer.batch_size=1
-- stage=test
-- data_dir=/data2/REACT2025-NEW
-- resume_id=260625151203_04baq1z7
-- trainer.generic.eval_eeg=true
-- trainer.main_model.args.personal_condition_mode=personality_only

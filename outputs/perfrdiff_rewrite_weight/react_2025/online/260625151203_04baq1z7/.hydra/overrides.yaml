@@ -1,5 +1,0 @@
-- stage=fit
-- data_dir=/data2/REACT2025-NEW
-- trainer.generic.train_eeg=true
-- trainer.generic.train_eeg_head_only=false
-- trainer.main_model.args.personal_condition_mode=personality_only
